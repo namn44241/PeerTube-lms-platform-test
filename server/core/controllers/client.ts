@@ -62,6 +62,11 @@ const embedMiddlewares = [
   (req: express.Request, res: express.Response, next: express.NextFunction) => {
     res.removeHeader('X-Frame-Options')
 
+    // Thêm CORS headers
+    res.header('Access-Control-Allow-Origin', '*')
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
+
     // Don't cache HTML file since it's an index to the immutable JS/CSS files
     res.setHeader('Cache-Control', 'public, max-age=0')
 
@@ -147,6 +152,11 @@ function serveServerTranslations (req: express.Request, res: express.Response) {
 }
 
 async function generateVideoEmbedHtmlPage (req: express.Request, res: express.Response) {
+  // Thêm CORS headers
+  res.header('Access-Control-Allow-Origin', '*')
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
+
   const allowParameters = { req }
 
   const allowedResult = await Hooks.wrapFun(

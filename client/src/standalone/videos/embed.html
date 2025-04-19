@@ -17,6 +17,124 @@
     <!-- /!\ Do not remove it /!\ -->
 
     <link rel="icon" type="image/png" href="/client/assets/images/favicon.png" />
+    
+    <!-- Thêm script theo dõi video cho Odoo -->
+    <script type="text/javascript">
+      document.addEventListener('DOMContentLoaded', function() {
+        console.log('PeerTube Embed: Trang đã tải xong, thiết lập theo dõi');
+        
+        // Biến để lưu trạng thái
+        var videoTracker = {
+          lastTime: 0,
+          skipDetectionEnabled: true,
+          videoElement: null,
+          checkInterval: null
+        };
+        
+        // Tìm video element
+        function setupVideoTracking() {
+          // Đợi cho đến khi video player được tạo
+          videoTracker.videoElement = document.querySelector('video');
+          if (!videoTracker.videoElement) {
+            console.log('PeerTube Embed: Không tìm thấy video, thử lại sau 1 giây');
+            setTimeout(setupVideoTracking, 1000);
+            return;
+          }
+          
+          console.log('PeerTube Embed: Đã tìm thấy video element');
+          
+          // Theo dõi sự kiện timeupdate
+          videoTracker.videoElement.addEventListener('timeupdate', function() {
+            var currentTime = this.currentTime;
+            var duration = this.duration;
+            
+            // Gửi thông tin về trang chính
+            try {
+              window.parent.postMessage({
+                type: 'videoTimeUpdate',
+                currentTime: currentTime,
+                duration: duration,
+                from: 'peerTubePlayer'
+              }, '*');
+            } catch (err) {
+              console.error('PeerTube Embed: Lỗi khi gửi message:', err);
+            }
+            
+            // Phát hiện tua nhanh
+            if (videoTracker.skipDetectionEnabled && videoTracker.lastTime > 0 && currentTime > videoTracker.lastTime + 3) {
+              console.log('PeerTube Embed: Phát hiện tua nhanh!', videoTracker.lastTime, '->', currentTime);
+              
+              // Đặt lại thời gian
+              this.currentTime = videoTracker.lastTime;
+              
+              // Gửi thông báo về trang chính
+              try {
+                window.parent.postMessage({
+                  type: 'videoSkipDetected',
+                  from: videoTracker.lastTime,
+                  to: currentTime,
+                  from: 'peerTubePlayer'
+                }, '*');
+              } catch (err) {
+                console.error('PeerTube Embed: Lỗi khi gửi thông báo tua nhanh:', err);
+              }
+            } else {
+              videoTracker.lastTime = currentTime;
+            }
+            
+            // Kiểm tra hoàn thành
+            if (currentTime >= duration - 0.5) {
+              try {
+                window.parent.postMessage({
+                  type: 'videoCompleted',
+                  currentTime: currentTime,
+                  duration: duration,
+                  from: 'peerTubePlayer'
+                }, '*');
+              } catch (err) {
+                console.error('PeerTube Embed: Lỗi khi gửi thông báo hoàn thành:', err);
+              }
+            }
+          });
+          
+          // Theo dõi sự kiện seeking
+          videoTracker.videoElement.addEventListener('seeking', function() {
+            if (!videoTracker.skipDetectionEnabled) return;
+            
+            var currentTime = this.currentTime;
+            
+            if (videoTracker.lastTime > 0 && currentTime > videoTracker.lastTime + 3) {
+              console.log('PeerTube Embed: Phát hiện tua nhanh (seeking)!', videoTracker.lastTime, '->', currentTime);
+              this.currentTime = videoTracker.lastTime;
+            }
+          });
+          
+          // Lắng nghe message từ trang chính
+          window.addEventListener('message', function(event) {
+            if (event.data && event.data.from === 'odooPlayer') {
+              console.log('PeerTube Embed: Nhận message từ Odoo:', event.data);
+              
+              if (event.data.type === 'setVideoTime' && typeof event.data.time === 'number') {
+                videoTracker.videoElement.currentTime = event.data.time;
+              }
+              
+              if (event.data.type === 'enableSkipDetection') {
+                videoTracker.skipDetectionEnabled = true;
+              }
+              
+              if (event.data.type === 'disableSkipDetection') {
+                videoTracker.skipDetectionEnabled = false;
+              }
+            }
+          });
+          
+          console.log('PeerTube Embed: Đã thiết lập theo dõi video thành công');
+        }
+        
+        // Bắt đầu theo dõi
+        setupVideoTracking();
+      });
+    </script>
   </head>
 
   <body id="custom-css" class="standalone-video-embed">
