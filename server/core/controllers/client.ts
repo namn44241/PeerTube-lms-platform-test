@@ -152,6 +152,9 @@ function serveServerTranslations (req: express.Request, res: express.Response) {
 }
 
 async function generateVideoEmbedHtmlPage (req: express.Request, res: express.Response) {
+  // Đảm bảo xóa header X-Frame-Options
+  res.removeHeader('X-Frame-Options')
+  
   // Thêm CORS headers
   res.header('Access-Control-Allow-Origin', '*')
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
@@ -168,11 +171,15 @@ async function generateVideoEmbedHtmlPage (req: express.Request, res: express.Re
   if (!allowedResult || allowedResult.allowed !== true) {
     logger.info('Embed is not allowed.', { allowedResult })
 
+    // Đảm bảo xóa header X-Frame-Options một lần nữa
+    res.removeHeader('X-Frame-Options')
     return sendHTML(allowedResult?.html || '', res)
   }
 
   const html = await ClientHtml.getVideoEmbedHTML(req.params.id)
 
+  // Đảm bảo xóa header X-Frame-Options một lần nữa trước khi gửi HTML
+  res.removeHeader('X-Frame-Options')
   return sendHTML(html, res)
 }
 

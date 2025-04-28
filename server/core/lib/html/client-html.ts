@@ -52,12 +52,15 @@ class ClientHtml {
   }
 }
 
-function sendHTML (html: string, res: express.Response, localizedHTML: boolean = false) {
+export function sendHTML (html: string, res: express.Response, localCache = false) {
+  // Đảm bảo xóa header X-Frame-Options
+  res.removeHeader('X-Frame-Options')
+  
+  // Thiết lập các header khác
   res.set('Content-Type', 'text/html; charset=UTF-8')
-  res.set('Cache-Control', 'max-age=0, no-cache, must-revalidate')
 
-  if (localizedHTML) {
-    res.set('Vary', 'Accept-Language')
+  if (localCache) {
+    res.set('Cache-Control', 'public, max-age=0')
   }
 
   return res.send(html)
